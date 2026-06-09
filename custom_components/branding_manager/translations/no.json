@@ -1,0 +1,43 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Branding Manager",
+        "description": "Sett den synlige merkevaren som brukes av Home Assistant-grensesnittet for denne instansen.",
+        "data": {
+          "enabled": "Aktivert",
+          "app_name": "Appnavn",
+          "company_name": "Firmanavn",
+          "document_title": "Nettlesertittel",
+          "logo_url": "Logo-URL",
+          "favicon_url": "Favicon-URL",
+          "primary_color": "Primærfarge",
+          "accent_color": "Aksentfarge",
+          "replace_home_assistant": "Erstatt Home Assistant-tekst"
+        }
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Branding Manager er allerede konfigurert."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Branding Manager",
+        "description": "Endringer sendes til åpne nettlesere med en gang du lagrer.",
+        "data": {
+          "enabled": "Aktivert",
+          "app_name": "Appnavn",
+          "company_name": "Firmanavn",
+          "document_title": "Nettlesertittel",
+          "logo_url": "Logo-URL",
+          "favicon_url": "Favicon-URL",
+          "primary_color": "Primærfarge",
+          "accent_color": "Aksentfarge",
+          "replace_home_assistant": "Erstatt Home Assistant-tekst"
+        }
+      }
+    }
+  }
+}

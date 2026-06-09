@@ -1,0 +1,7 @@
+{
+  "name": "Branding Manager",
+  "render_readme": true,
+  "domains": ["branding_manager"],
+  "homeassistant": "2025.7.0",
+  "iot_class": "Local Push"
+}

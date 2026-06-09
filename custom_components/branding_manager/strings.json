@@ -1,0 +1,43 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Branding Manager",
+        "description": "Set the visible brand used by the Home Assistant frontend for this instance.",
+        "data": {
+          "enabled": "Enabled",
+          "app_name": "App name",
+          "company_name": "Company name",
+          "document_title": "Browser title",
+          "logo_url": "Logo URL",
+          "favicon_url": "Favicon URL",
+          "primary_color": "Primary color",
+          "accent_color": "Accent color",
+          "replace_home_assistant": "Replace Home Assistant text"
+        }
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Branding Manager is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Branding Manager",
+        "description": "Changes are pushed to connected browsers as soon as you save.",
+        "data": {
+          "enabled": "Enabled",
+          "app_name": "App name",
+          "company_name": "Company name",
+          "document_title": "Browser title",
+          "logo_url": "Logo URL",
+          "favicon_url": "Favicon URL",
+          "primary_color": "Primary color",
+          "accent_color": "Accent color",
+          "replace_home_assistant": "Replace Home Assistant text"
+        }
+      }
+    }
+  }
+}

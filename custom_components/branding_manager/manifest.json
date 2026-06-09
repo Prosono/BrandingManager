@@ -1,0 +1,13 @@
+{
+  "domain": "branding_manager",
+  "name": "Branding Manager",
+  "after_dependencies": ["frontend"],
+  "codeowners": [],
+  "config_flow": true,
+  "dependencies": ["http", "websocket_api"],
+  "documentation": "https://github.com/custom-components/branding-manager",
+  "integration_type": "service",
+  "issue_tracker": "https://github.com/custom-components/branding-manager/issues",
+  "single_config_entry": true,
+  "version": "0.1.0"
+}

@@ -1,0 +1,66 @@
+set_branding:
+  name: Set branding
+  description: Update visible frontend branding and push the changes to connected browsers.
+  fields:
+    enabled:
+      name: Enabled
+      description: Whether runtime branding should be applied.
+      selector:
+        boolean:
+    app_name:
+      name: App name
+      description: Primary visible application name.
+      selector:
+        text:
+    company_name:
+      name: Company name
+      description: Optional organization name used by custom replacement rules and title text.
+      selector:
+        text:
+    document_title:
+      name: Browser title
+      description: Optional browser tab title. The app name is used when this is empty.
+      selector:
+        text:
+    logo_url:
+      name: Logo URL
+      description: URL for the replacement logo.
+      selector:
+        text:
+    favicon_url:
+      name: Favicon URL
+      description: URL for the replacement favicon. The logo URL is used when this is empty.
+      selector:
+        text:
+    primary_color:
+      name: Primary color
+      description: Optional CSS color for the frontend primary color variable.
+      selector:
+        text:
+    accent_color:
+      name: Accent color
+      description: Optional CSS color for the frontend accent color variable.
+      selector:
+        text:
+    replace_home_assistant:
+      name: Replace Home Assistant
+      description: Replace visible Home Assistant text with the app name.
+      selector:
+        boolean:
+    replacements:
+      name: Replacements
+      description: Advanced list of text replacement objects with from, to, and optional case_sensitive fields.
+      advanced: true
+      selector:
+        object:
+    custom_css:
+      name: Custom CSS
+      description: Extra CSS injected into the frontend.
+      advanced: true
+      selector:
+        text:
+          multiline: true
+
+reset_branding:
+  name: Reset branding
+  description: Reset Branding Manager to its default configuration and notify connected browsers.
