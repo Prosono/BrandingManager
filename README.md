@@ -4,6 +4,28 @@ Branding Manager is a Home Assistant custom integration that white-labels the vi
 
 It does not change Home Assistant Core, the API, licensing notices, package metadata, or the legal identity of the software. Use it for legitimate white-label deployments where you have the right to brand the instance.
 
+## HACS
+
+This repository is structured as a HACS integration repository:
+
+```text
+custom_components/branding_manager/
+README.md
+hacs.json
+```
+
+To install it with HACS:
+
+1. Open **HACS**.
+2. Open the three-dot menu and choose **Custom repositories**.
+3. Add this GitHub repository URL.
+4. Select **Integration** as the category.
+5. Download **Branding Manager**.
+6. Restart Home Assistant.
+7. Add **Branding Manager** from **Settings > Devices & services > Add integration**.
+
+For GitHub releases, publish a full GitHub release such as `v0.1.0`; a tag alone is not enough for the nicer HACS release picker.
+
 ## What it does
 
 - Stores branding settings in Home Assistant storage.

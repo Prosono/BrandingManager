@@ -2,12 +2,12 @@
   "domain": "branding_manager",
   "name": "Branding Manager",
   "after_dependencies": ["frontend"],
-  "codeowners": [],
+  "codeowners": ["@Prosono"],
   "config_flow": true,
   "dependencies": ["http", "websocket_api"],
-  "documentation": "https://github.com/custom-components/branding-manager",
+  "documentation": "https://github.com/Prosono/BrandingManager",
   "integration_type": "service",
-  "issue_tracker": "https://github.com/custom-components/branding-manager/issues",
+  "issue_tracker": "https://github.com/Prosono/BrandingManager/issues",
   "single_config_entry": true,
   "version": "0.1.0"
 }
