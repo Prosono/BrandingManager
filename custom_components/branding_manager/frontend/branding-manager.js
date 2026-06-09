@@ -25,7 +25,11 @@
     observedRoots: new WeakSet(),
     observers: [],
     patchTimer: undefined,
+    pollTimer: undefined,
+    styleText: "",
     unsubscribe: undefined,
+    api: undefined,
+    loaded: false,
   };
 
   const SKIP_TEXT_TAGS = new Set([
@@ -47,7 +51,10 @@
   const LOGO_SELECTOR = [
     "img",
     "image",
+    "svg[aria-label*='Home Assistant' i]",
+    "svg[title*='Home Assistant' i]",
     "ha-icon[icon*='home-assistant' i]",
+    "ha-icon[icon*='homeassistant' i]",
     "ha-icon[icon='hass:home-assistant']",
     "ha-svg-icon[title*='Home Assistant' i]",
   ].join(",");
@@ -117,12 +124,19 @@
   };
 
   const isBrandAsset = (element) => {
+    const className =
+      typeof element.className === "string"
+        ? element.className
+        : element.className?.baseVal;
     const source = [
       element.getAttribute("src"),
       element.getAttribute("href"),
       element.getAttribute("alt"),
       element.getAttribute("title"),
       element.getAttribute("icon"),
+      element.getAttribute("aria-label"),
+      className,
+      element.querySelector?.("title")?.textContent,
     ]
       .filter(Boolean)
       .join(" ");
@@ -167,11 +181,21 @@
 
     let node = walker.nextNode();
     while (node) {
-      if (!state.originals.has(node)) {
-        state.originals.set(node, node.nodeValue || "");
+      const current = node.nodeValue || "";
+      const original = state.originals.get(node);
+      const patchedOriginal =
+        original === undefined ? undefined : replaceText(original);
+
+      if (
+        original === undefined ||
+        (current !== original && current !== patchedOriginal)
+      ) {
+        state.originals.set(node, current);
       }
-      const original = state.originals.get(node) || "";
-      const next = state.config.enabled ? replaceText(original) : original;
+      const nextOriginal = state.originals.get(node) || "";
+      const next = state.config.enabled
+        ? replaceText(nextOriginal)
+        : nextOriginal;
       if (node.nodeValue !== next) {
         node.nodeValue = next;
       }
@@ -187,11 +211,21 @@
         if (!element.hasAttribute(attr)) {
           continue;
         }
-        if (!originals.has(attr)) {
-          originals.set(attr, element.getAttribute(attr) || "");
+        const current = element.getAttribute(attr) || "";
+        const original = originals.get(attr);
+        const patchedOriginal =
+          original === undefined ? undefined : replaceText(original);
+
+        if (
+          original === undefined ||
+          (current !== original && current !== patchedOriginal)
+        ) {
+          originals.set(attr, current);
         }
-        const original = originals.get(attr) || "";
-        const next = state.config.enabled ? replaceText(original) : original;
+        const nextOriginal = originals.get(attr) || "";
+        const next = state.config.enabled
+          ? replaceText(nextOriginal)
+          : nextOriginal;
         if (element.getAttribute(attr) !== next) {
           element.setAttribute(attr, next);
         }
@@ -200,7 +234,9 @@
   };
 
   const patchBrandAssets = (root) => {
-    const logoUrl = toAbsoluteUrl(state.config.logo_url);
+    const logoUrl = toAbsoluteUrl(
+      state.config.logo_url || state.config.favicon_url,
+    );
     if (!state.config.enabled || !logoUrl) {
       return;
     }
@@ -221,6 +257,12 @@
 
       if (element instanceof SVGImageElement) {
         element.setAttribute("href", logoUrl);
+        continue;
+      }
+
+      if (element instanceof SVGSVGElement) {
+        element.setAttribute("data-branding-manager-logo", "true");
+        element.setAttribute("role", "img");
         continue;
       }
 
@@ -245,19 +287,28 @@
     state.observedRoots.add(root);
 
     const observer = new MutationObserver(schedulePatch);
-    observer.observe(root, {
-      attributes: true,
-      attributeFilter: [...TEXT_ATTRIBUTES, "src", "href", "icon"],
-      characterData: true,
-      childList: true,
-      subtree: true,
-    });
+    try {
+      observer.observe(root, {
+        attributes: true,
+        attributeFilter: [...TEXT_ATTRIBUTES, "src", "href", "icon"],
+        characterData: true,
+        childList: true,
+        subtree: true,
+      });
+    } catch (_err) {
+      observer.observe(root, {
+        characterData: true,
+        childList: true,
+        subtree: true,
+      });
+    }
     state.observers.push(observer);
   };
 
   const patchDom = () => {
     walkRoots(document, (root) => {
       observeRoot(root);
+      ensureStyle(root);
       patchTextNodes(root);
       patchAttributes(root);
       patchBrandAssets(root);
@@ -332,48 +383,75 @@
     setLink(MANIFEST_ID, "manifest", manifestUrl, "application/manifest+json");
   };
 
-  const applyStyleBranding = () => {
-    const config = state.config;
-    let style = document.getElementById(STYLE_ID);
+  const getStyleContainer = (root) => {
+    if (root === document) {
+      return document.head;
+    }
+    return root;
+  };
+
+  const ensureStyle = (root) => {
+    const container = getStyleContainer(root);
+    if (!container) {
+      return;
+    }
+
+    let style = container.querySelector?.(`#${STYLE_ID}`);
     if (!style) {
       style = document.createElement("style");
       style.id = STYLE_ID;
-      document.head.appendChild(style);
+      container.appendChild(style);
     }
+
+    if (style.textContent !== state.styleText) {
+      style.textContent = state.styleText;
+    }
+  };
+
+  const buildStyleText = () => {
+    const config = state.config;
 
     const rootVars = [
       config.primary_color ? `--primary-color: ${config.primary_color};` : "",
       config.accent_color ? `--accent-color: ${config.accent_color};` : "",
-      config.logo_url
-        ? `--branding-manager-logo: ${cssUrl(config.logo_url)};`
+      config.logo_url || config.favicon_url
+        ? `--branding-manager-logo: ${cssUrl(config.logo_url || config.favicon_url)};`
         : "",
     ]
       .filter(Boolean)
       .join("\n");
 
-    style.textContent = config.enabled
-      ? `
+    if (!config.enabled) {
+      return "";
+    }
+
+    return `
 :root {
 ${rootVars}
 }
 
-ha-icon[data-branding-manager-logo="true"],
-ha-svg-icon[data-branding-manager-logo="true"] {
+[data-branding-manager-logo="true"] {
   background-image: var(--branding-manager-logo);
   background-position: center;
   background-repeat: no-repeat;
   background-size: contain;
   color: transparent !important;
+  fill: transparent !important;
+  overflow: hidden;
 }
 
-ha-icon[data-branding-manager-logo="true"] *,
-ha-svg-icon[data-branding-manager-logo="true"] * {
+[data-branding-manager-logo="true"] *,
+svg[data-branding-manager-logo="true"] > * {
   opacity: 0 !important;
 }
 
 ${config.custom_css}
-`
-      : "";
+`;
+  };
+
+  const applyStyleBranding = () => {
+    state.styleText = buildStyleText();
+    walkRoots(document, ensureStyle);
   };
 
   const applyBranding = () => {
@@ -384,17 +462,38 @@ ${config.custom_css}
   };
 
   const findHass = () => {
-    const candidates = [
-      document.querySelector("home-assistant"),
-      document.querySelector("hc-main"),
-      document.querySelector("home-assistant-main"),
-    ].filter(Boolean);
+    const roots = [document];
+    const seenRoots = new WeakSet();
 
-    for (const candidate of candidates) {
-      if (candidate?.hass?.connection) {
-        return candidate.hass;
+    while (roots.length) {
+      const root = roots.shift();
+      if (!root || seenRoots.has(root)) {
+        continue;
+      }
+      seenRoots.add(root);
+
+      const elements = [
+        root.host,
+        root.querySelector?.("home-assistant"),
+        root.querySelector?.("hc-main"),
+        root.querySelector?.("home-assistant-main"),
+        ...(root.querySelectorAll?.("*") || []),
+      ].filter(Boolean);
+
+      for (const element of elements) {
+        if (
+          element.hass &&
+          (typeof element.hass.callWS === "function" ||
+            typeof element.hass.connection?.sendMessagePromise === "function")
+        ) {
+          return element.hass;
+        }
+        if (element.shadowRoot) {
+          roots.push(element.shadowRoot);
+        }
       }
     }
+
     return undefined;
   };
 
@@ -415,47 +514,146 @@ ${config.custom_css}
       }, 250);
     });
 
+  const getContext = (context) =>
+    new Promise((resolve, reject) => {
+      const target = document.querySelector("home-assistant") || document.body;
+      const timeout = window.setTimeout(() => {
+        reject(new Error(`Timed out waiting for ${context} context`));
+      }, 5000);
+      const event = new CustomEvent("context-request", {
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+      });
+      event.context = context;
+      event.subscribe = false;
+      event.callback = (value) => {
+        window.clearTimeout(timeout);
+        resolve(value);
+      };
+      target.dispatchEvent(event);
+    });
+
+  const getConnection = async (hass) => {
+    if (hass.connection) {
+      return hass.connection;
+    }
+
+    try {
+      const context = await getContext("connection");
+      return context?.connection || context?.conn || context;
+    } catch (_err) {
+      return undefined;
+    }
+  };
+
+  const callWS = async (hass, message) => {
+    if (typeof hass.callWS === "function") {
+      return hass.callWS(message);
+    }
+
+    if (typeof hass.connection?.sendMessagePromise === "function") {
+      return hass.connection.sendMessagePromise(message);
+    }
+
+    const connection = await getConnection(hass);
+    if (typeof connection?.sendMessagePromise === "function") {
+      return connection.sendMessagePromise(message);
+    }
+
+    throw new Error("No Home Assistant WebSocket API is available");
+  };
+
+  const configsAreEqual = (first, second) =>
+    JSON.stringify(first) === JSON.stringify(second);
+
+  const refreshConfig = async (hass, forceApply = false) => {
+    const config = normalizeConfig(
+      await callWS(hass, { type: `${DOMAIN}/get_config` }),
+    );
+    const changed = !configsAreEqual(config, state.config);
+    state.config = config;
+    state.loaded = true;
+    if (changed || forceApply) {
+      applyBranding();
+    }
+  };
+
+  const startPolling = (hass) => {
+    if (state.pollTimer !== undefined) {
+      return;
+    }
+
+    state.pollTimer = window.setInterval(() => {
+      refreshConfig(hass).catch((err) => {
+        // eslint-disable-next-line no-console
+        console.warn("[Branding Manager] Could not refresh branding config", err);
+      });
+    }, 5000);
+
+    window.addEventListener("focus", () => {
+      refreshConfig(hass).catch(() => undefined);
+    });
+  };
+
   const subscribeUpdates = async (hass) => {
     if (state.unsubscribe) {
       state.unsubscribe();
       state.unsubscribe = undefined;
     }
 
-    if (hass.connection?.subscribeMessage) {
-      state.unsubscribe = await hass.connection.subscribeMessage((message) => {
+    const connection = await getConnection(hass);
+
+    if (connection?.subscribeMessage) {
+      state.unsubscribe = await connection.subscribeMessage((message) => {
         state.config = normalizeConfig(message.config || message);
+        state.loaded = true;
         applyBranding();
       }, { type: `${DOMAIN}/subscribe_updates` });
-      return;
+      return true;
     }
 
-    if (hass.connection?.subscribeEvents) {
-      state.unsubscribe = await hass.connection.subscribeEvents((event) => {
+    if (connection?.subscribeEvents) {
+      state.unsubscribe = await connection.subscribeEvents((event) => {
         state.config = normalizeConfig(event.data?.config || event.config);
+        state.loaded = true;
         applyBranding();
       }, `${DOMAIN}_updated`);
+      return true;
     }
+
+    return false;
   };
 
   const loadConfig = async () => {
     const hass = await waitForHass();
-    const config = await hass.connection.sendMessagePromise({
-      type: `${DOMAIN}/get_config`,
-    });
-    state.config = normalizeConfig(config);
-    applyBranding();
-    await subscribeUpdates(hass);
+    state.api = hass;
+    await refreshConfig(hass, true);
+    if (!(await subscribeUpdates(hass))) {
+      startPolling(hass);
+    }
   };
 
   window.brandingManager = {
     apply: applyBranding,
     reload: loadConfig,
+    refresh() {
+      return state.api ? refreshConfig(state.api, true) : loadConfig();
+    },
     setLocalConfig(config) {
       state.config = normalizeConfig(config);
       applyBranding();
     },
     get config() {
       return { ...state.config };
+    },
+    get status() {
+      return {
+        loaded: state.loaded,
+        hasApi: Boolean(state.api),
+        subscribed: Boolean(state.unsubscribe),
+        polling: state.pollTimer !== undefined,
+      };
     },
   };
 

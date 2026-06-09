@@ -21,8 +21,16 @@ To install it with HACS:
 3. Add this GitHub repository URL.
 4. Select **Integration** as the category.
 5. Download **Branding Manager**.
-6. Restart Home Assistant.
-7. Add **Branding Manager** from **Settings > Devices & services > Add integration**.
+6. Add the frontend module to `configuration.yaml`:
+
+   ```yaml
+   frontend:
+     extra_module_url:
+       - /branding-manager/branding-manager.js
+   ```
+
+7. Restart Home Assistant.
+8. Add **Branding Manager** from **Settings > Devices & services > Add integration**.
 
 For GitHub releases, publish a full GitHub release such as `v0.1.0`; a tag alone is not enough for the nicer HACS release picker.
 
@@ -77,6 +85,18 @@ data:
 ```
 
 Connected browsers receive the update over WebSocket and apply it without a refresh.
+
+## Troubleshooting
+
+If nothing changes in the frontend, first confirm that the module is loaded. Open the browser console in Home Assistant and run:
+
+```js
+window.brandingManager?.status
+```
+
+Expected output has `loaded: true` and either `subscribed: true` or `polling: true`.
+
+If `window.brandingManager` is `undefined`, Home Assistant has not loaded `/branding-manager/branding-manager.js`. Check the `frontend.extra_module_url` entry, restart Home Assistant, and hard-refresh the browser.
 
 ## Notes
 
